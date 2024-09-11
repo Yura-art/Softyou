@@ -2,76 +2,82 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class movment : MonoBehaviour
+public class PlayerMovement : MonoBehaviour
 {
-    public float speed = 5f;
-    public float jumpForce = 10f;
+	Rigidbody2D rigid;
+	Animator anim;
+	SpriteRenderer sprt;
 
-    [SerializeField] Transform detectionCenter;
-    [SerializeField] float detectionRadius = 0.2f;
+	float horizontalValue;
+	[SerializeField] float speed;
+	[SerializeField] float jumpForce;
 
-    private Rigidbody2D rigid;
-    private Animator anim;
-    private SpriteRenderer sprt;
+	[SerializeField] Transform detectionCenter;
+	[SerializeField] float detectionRadius;
 
-    private float horizontalValue;
-    private bool isGrounded;
-    private bool jumpRequested = false;
+	[SerializeField] Collider2D[] collisions;
+	[SerializeField] bool isGrounded;
+	bool jumpActivated = false;
 
-    void Start()
-    {
-        rigid = GetComponent<Rigidbody2D>();
-        anim = GetComponent<Animator>();
-        sprt = GetComponent<SpriteRenderer>();
-    }
+	// Start is called before the first frame update
+	void Start()
+	{
+		rigid = GetComponent<Rigidbody2D>();
+		anim = GetComponent<Animator>();
+		sprt = GetComponent<SpriteRenderer>();
+	}
 
-    void Update()
-    {
-        // Captura la entrada horizontal
-        horizontalValue = Input.GetAxis("Horizontal");
+	void Update() //SE EJECUTA SEGUN EL NUMERO DE FRAMES QUE PUEDA PROCESAR EL COMPUTADOR
+	{
+		horizontalValue = Input.GetAxis("Horizontal");
+		anim.SetBool("InMovement", horizontalValue != 0 ? true : false);
 
-        // Detecta si el jugador quiere saltar
-        if (Input.GetKeyDown(KeyCode.Space) && isGrounded)
-        {
-            jumpRequested = true;
-        }
+		if (Input.GetKeyDown(KeyCode.Space) && isGrounded == true)
+		{
+			jumpActivated = true;
+		}
 
-        // Voltea al jugador según la dirección del movimiento
-        Flip();
-    }
+		Flip();
+	}
 
-    void FixedUpdate()
-    {
-        // Movimiento del jugador
-        float moveSpeed = horizontalValue * speed;
-        rigid.velocity = new Vector2(moveSpeed, rigid.velocity.y);
+	private void FixedUpdate() //SE EJECUTA UN NUMERO DE VECES FIJAS SIN IMPORTAR EL COMPUTADOR
+	{
+		rigid.velocity = new Vector2(horizontalValue * speed, rigid.velocity.y);
+		anim.SetFloat("YVelocity", rigid.velocity.y);
 
-        // Detecta si el jugador está en el suelo
-        isGrounded = Physics2D.OverlapCircle(detectionCenter.position, detectionRadius);
+		collisions = Physics2D.OverlapCircleAll(detectionCenter.position, detectionRadius);
 
-        // Actualiza los parámetros del Animator
-        anim.SetBool("isRunning", Mathf.Abs(horizontalValue) > 0);
-        anim.SetBool("IsGrounded", isGrounded);
-        anim.SetFloat("YVelocity", rigid.velocity.y);
+		if (collisions.Length > 0)
+		{
+			isGrounded = true;
+		}
 
-        if (jumpRequested)
-        {
-            rigid.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
-            anim.SetTrigger("Jump");
-            jumpRequested = false;
-        }
-    }
+		if (collisions.Length == 1 && collisions[0].gameObject == gameObject)
+		{
+			isGrounded = false;
+		}
 
-    private void OnDrawGizmos()
-    {
-        Gizmos.DrawWireSphere(detectionCenter.position, detectionRadius);
-    }
+		anim.SetBool("IsGrounded", isGrounded);
 
-    private void Flip()
-    {
-        if (horizontalValue > 0 && sprt.flipX || horizontalValue < 0 && !sprt.flipX)
-        {
-            sprt.flipX = !sprt.flipX;
-        }
-    }
+		if (jumpActivated == true)
+		{
+			rigid.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
+			anim.SetTrigger("Jump");
+			jumpActivated = false;
+		}
+
+	}
+
+	private void OnDrawGizmos()
+	{
+		Gizmos.DrawWireSphere(detectionCenter.position, detectionRadius);
+	}
+
+	public void Flip()
+	{
+		if (horizontalValue > 0 && sprt.flipX == true || horizontalValue < 0 && sprt.flipX == false)
+		{
+			sprt.flipX = !sprt.flipX;
+		}
+	}
 }
